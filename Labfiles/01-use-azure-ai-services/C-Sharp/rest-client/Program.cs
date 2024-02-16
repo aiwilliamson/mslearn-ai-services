@@ -21,7 +21,7 @@ namespace rest_client
                 IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json");
                 IConfigurationRoot configuration = builder.Build();
                 AiSvcEndpoint = configuration["AIServicesEndpoint"];
-                AiSvCKey = configuration["AIServicesKey"];
+                AiSvCKey = configuration["AIServicesKey"];      // TO DO - get this via keyvault, not json
 
 
                 // Get user input (until they enter "quit")
@@ -57,11 +57,11 @@ namespace rest_client
                             new JProperty("id", 1),
                             new JProperty("text", text)
                     ))));
-                
+
                 // Encode as UTF-8
                 UTF8Encoding utf8 = new UTF8Encoding(true, true);
                 byte[] encodedBytes = utf8.GetBytes(jsonBody.ToString());
-                
+
                 // Let's take a look at the JSON we'll send to the service
                 Console.WriteLine(utf8.GetString(encodedBytes, 0, encodedBytes.Length));
 
@@ -103,7 +103,7 @@ namespace rest_client
                     Console.WriteLine(response.ToString());
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
