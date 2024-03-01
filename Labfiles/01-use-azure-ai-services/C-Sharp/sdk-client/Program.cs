@@ -3,6 +3,9 @@ using Azure;
 using Microsoft.Extensions.Configuration;
 using System.Text;
 using Azure.AI.TextAnalytics;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using System.Threading.Tasks;
 
 namespace sdk_client
 {
@@ -11,15 +14,12 @@ namespace sdk_client
 
         private static string AISvcEndpoint;
         private static string AISvcKey;
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             try
             {
-                // Get config settings from AppSettings
-                IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json");
-                IConfigurationRoot configuration = builder.Build();
-                AISvcEndpoint = configuration["AIServicesEndpoint"];
-                AISvcKey = configuration["AIServicesKey"];
+                AISvcEndpoint = await GetSecret("aw8-keyvault", "AIServicesEndpoint");
+                AISvcKey = await GetSecret("aw8-keyvault", "AIServicesKey");
 
                 // Get user input (until they enter "quit")
                 string userText = "";
@@ -31,7 +31,9 @@ namespace sdk_client
                     {
                         // Call function to detect language
                         string language = GetLanguage(userText);
-                        Console.WriteLine("Language: " + language);
+                        string sentiment = AnalyseSentiment(userText);
+                        Console.WriteLine("Language: " + language + ".\t Sentiment: " + sentiment);
+
                     }
 
                 }
@@ -41,6 +43,16 @@ namespace sdk_client
                 Console.WriteLine(ex.Message);
             }
         }
+
+        private static async Task<string> GetSecret(string keyVaultName, string secretName)
+        {
+            var kvUri = $"https://{keyVaultName}.vault.azure.net";
+            var client = new SecretClient(new Uri(kvUri), new DefaultAzureCredential());
+            KeyVaultSecret secret = await client.GetSecretAsync(secretName);
+            Console.WriteLine($"Retrieved secret: {secret.Value}");
+            return secret.Value;
+        }
+
         static string GetLanguage(string text)
         {
 
@@ -48,11 +60,20 @@ namespace sdk_client
             AzureKeyCredential credentials = new AzureKeyCredential(AISvcKey);
             Uri endpoint = new Uri(AISvcEndpoint);
             var client = new TextAnalyticsClient(endpoint, credentials);
-
             // Call the service to get the detected language
             DetectedLanguage detectedLanguage = client.DetectLanguage(text);
-            return(detectedLanguage.Name);
+            return (detectedLanguage.Name);
+        }
 
+        private static string AnalyseSentiment(string text)
+        {
+            // Create client using endpoint and key
+            AzureKeyCredential credentials = new AzureKeyCredential(AISvcKey);
+            Uri endpoint = new Uri(AISvcEndpoint);
+            var client = new TextAnalyticsClient(endpoint, credentials);
+            // Call the service to get the sentiment
+            DocumentSentiment documentSentiment = client.AnalyzeSentiment(text);
+            return (documentSentiment.Sentiment.ToString());
         }
     }
 }
